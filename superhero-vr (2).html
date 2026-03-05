@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Be The Hero!</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Arial Rounded MT Bold', Arial, sans-serif; overflow: hidden; background: #0a0a2e; }
+
+  #selection {
+    width: 100vw; height: 100vh;
+    background: linear-gradient(135deg, #1a1a6e, #2d0060, #001a6e);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .star { position: absolute; border-radius: 50%; background: white; animation: twinkle 2s infinite; }
+  @keyframes twinkle { 0%,100%{opacity:.2;transform:scale(1)} 50%{opacity:1;transform:scale(1.4)} }
+
+  #selection h1 {
+    font-size: clamp(2rem,5vw,3.5rem); color:#fff; text-align:center;
+    text-shadow:0 0 30px #ff0,0 0 60px #f80; margin-bottom:.3em; z-index:1;
+    animation:pulse 2s infinite;
+  }
+  @keyframes pulse{0%,100%{text-shadow:0 0 20px #ff0,0 0 40px #f80}50%{text-shadow:0 0 40px #ff0,0 0 80px #f80,0 0 120px #ff0}}
+  #selection p{color:#ccc;font-size:1.1rem;margin-bottom:2.5em;z-index:1;}
+
+  .cards{display:flex;gap:2em;flex-wrap:wrap;justify-content:center;z-index:1;}
+  .card{width:200px;border-radius:24px;cursor:pointer;transition:transform .3s,box-shadow .3s;position:relative;overflow:hidden;border:3px solid transparent;animation:float 3s ease-in-out infinite;}
+  .card:nth-child(2){animation-delay:.5s;}.card:nth-child(3){animation-delay:1s;}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  .card:hover{transform:translateY(-18px) scale(1.07)!important;}
+  .batman-card{background:linear-gradient(160deg,#1a1a2e,#2d2d5e,#1a1a2e);box-shadow:0 8px 40px #4466ff88;border-color:#4466ff;}
+  .superman-card{background:linear-gradient(160deg,#1a0000,#660000,#001166);box-shadow:0 8px 40px #ff333388;border-color:#ff3333;}
+  .spiderman-card{background:linear-gradient(160deg,#3d0000,#990000,#3d0000);box-shadow:0 8px 40px #cc000088;border-color:#ff2222;}
+  .card-emoji{font-size:4.5rem;text-align:center;padding:1.2em 0 .3em;display:block;}
+  .card-name{text-align:center;font-size:1.3rem;font-weight:900;padding:.3em 0;color:#fff;text-transform:uppercase;letter-spacing:2px;}
+  .card-tag{text-align:center;font-size:.78rem;color:#aaa;padding:0 1em 1.2em;}
+  .card-btn{display:block;margin:0 1em 1.2em;padding:.6em;border-radius:12px;text-align:center;font-weight:900;font-size:.95rem;border:none;cursor:pointer;transition:filter .2s;}
+  .card-btn:hover{filter:brightness(1.3);}
+  .batman-btn{background:linear-gradient(90deg,#4466ff,#0033cc);color:#fff;}
+  .superman-btn{background:linear-gradient(90deg,#ff3333,#cc0000);color:#fff;}
+  .spiderman-btn{background:linear-gradient(90deg,#ff2222,#660000);color:#fff;}
+
+  #countdown{display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;flex-direction:column;}
+  #countdown .num{font-size:20vw;font-weight:900;color:#fff;text-shadow:0 0 60px currentColor;animation:popIn .6s ease;}
+  @keyframes popIn{0%{transform:scale(0);opacity:0}60%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+  #countdown p{font-size:2rem;color:#fff;margin-top:1em;animation:popIn .6s ease;}
+
+  #vr-screen{display:none;width:100vw;height:100vh;position:fixed;inset:0;z-index:50;}
+  #vr-left,#vr-right{position:absolute;top:0;height:100%;width:50%;}
+  #vr-left{left:0;}#vr-right{right:0;}
+  #vr-divider{position:absolute;left:50%;top:0;width:6px;height:100%;background:#000;transform:translateX(-50%);z-index:60;}
+  #hud{position:absolute;inset:0;z-index:70;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:1.5em;}
+  #hero-name-hud{text-align:center;font-size:clamp(1.2rem,3vw,2rem);font-weight:900;color:#fff;text-shadow:0 0 20px currentColor;letter-spacing:4px;text-transform:uppercase;}
+  #back-btn{position:absolute;bottom:1.5em;left:50%;transform:translateX(-50%);pointer-events:all;padding:.7em 2em;border-radius:50px;border:none;cursor:pointer;font-size:1rem;font-weight:900;background:rgba(255,255,255,0.2);color:#fff;backdrop-filter:blur(10px);transition:background .2s;}
+  #back-btn:hover{background:rgba(255,255,255,0.35);}
+  #vr-label{position:absolute;top:1em;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.5);color:#fff;font-size:.8rem;padding:.3em 1em;border-radius:20px;z-index:80;pointer-events:none;white-space:nowrap;}
+</style>
+</head>
+<body>
+
+<div id="selection">
+  <h1>🦸 Be The Hero!</h1>
+  <p>Choose your superhero and step into their world!</p>
+  <div class="cards">
+    <div class="card batman-card" onclick="selectHero('batman')">
+      <span class="card-emoji">🦇</span>
+      <div class="card-name">Batman</div>
+      <div class="card-tag">Dark Knight of Gotham City</div>
+      <button class="card-btn batman-btn">Choose Batman!</button>
+    </div>
+    <div class="card superman-card" onclick="selectHero('superman')">
+      <span class="card-emoji">🦸</span>
+      <div class="card-name">Superman</div>
+      <div class="card-tag">Man of Steel, Son of Krypton</div>
+      <button class="card-btn superman-btn">Choose Superman!</button>
+    </div>
+    <div class="card spiderman-card" onclick="selectHero('spiderman')">
+      <span class="card-emoji">🕷️</span>
+      <div class="card-name">Spider-Man</div>
+      <div class="card-tag">Friendly Neighborhood Hero</div>
+      <button class="card-btn spiderman-btn">Choose Spidey!</button>
+    </div>
+  </div>
+</div>
+
+<div id="countdown">
+  <div class="num" id="cnt-num">3</div>
+  <p id="cnt-msg">Put on your VR mask!</p>
+</div>
+
+<div id="vr-screen">
+  <canvas id="vr-left"></canvas>
+  <canvas id="vr-right"></canvas>
+  <div id="vr-divider"></div>
+  <div id="vr-label">📱 Move your device to look around</div>
+  <div id="hud">
+    <div id="hero-name-hud"></div>
+  </div>
+  <button id="back-btn" onclick="goBack()">← Choose Again</button>
+</div>
+
+<script>
+// Stars
+const sel=document.getElementById('selection');
+for(let i=0;i<80;i++){const s=document.createElement('div');s.className='star';const sz=Math.random()*3+1;s.style.cssText=`width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;animation-delay:${Math.random()*3}s;animation-duration:${1.5+Math.random()*2}s`;sel.appendChild(s);}
+
+const HEROES={
+  batman:{name:'Batman',color:'#4466ff',bg:'#050510',accent:'#2233aa'},
+  superman:{name:'Superman',color:'#ff3333',bg:'#050510',accent:'#0000cc'},
+  spiderman:{name:'Spider-Man',color:'#ff2222',bg:'#0a0005',accent:'#880000'}
+};
+
+let currentHero=null,renderers=[],scenes=[],cameras=[],animId=null;
+let yaw=0,pitch=0,targetYaw=0,targetPitch=0,lastTouch=null;
+let heroMeshes=[], clock=new THREE.Clock();
+
+function selectHero(h){currentHero=h;startCountdown();}
+
+function startCountdown(){
+  const cd=document.getElementById('countdown'),num=document.getElementById('cnt-num'),msg=document.getElementById('cnt-msg');
+  const h=HEROES[currentHero];
+  cd.style.display='flex';cd.style.background=`radial-gradient(circle,${h.accent}99,#000)`;
+  let count=3;num.textContent=count;num.style.color=h.color;msg.textContent='🥽 Put on your VR mask!';
+  const iv=setInterval(()=>{
+    count--;
+    if(count>0){num.textContent=count;num.style.animation='none';void num.offsetWidth;num.style.animation='';}
+    else if(count===0){num.textContent='🚀';msg.textContent=`You are ${h.name}!`;}
+    else{clearInterval(iv);cd.style.display='none';launchVR();}
+  },900);
+}
+
+function launchVR(){
+  document.getElementById('selection').style.display='none';
+  const vs=document.getElementById('vr-screen');vs.style.display='block';
+  const h=HEROES[currentHero];
+  document.getElementById('hero-name-hud').textContent=`⚡ ${h.name} ⚡`;
+  document.getElementById('hero-name-hud').style.color=h.color;
+  document.getElementById('hero-name-hud').style.textShadow=`0 0 20px ${h.color}`;
+  yaw=0;pitch=0;targetYaw=0;targetPitch=0;renderers=[];scenes=[];cameras=[];heroMeshes=[];
+  ['vr-left','vr-right'].forEach(id=>{
+    const canvas=document.getElementById(id);
+    canvas.width=window.innerWidth/2;canvas.height=window.innerHeight;
+    const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+    renderer.setSize(window.innerWidth/2,window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.shadowMap.enabled=true;
+    const scene=new THREE.Scene();scene.background=new THREE.Color(h.bg);
+    const camera=new THREE.PerspectiveCamera(90,(window.innerWidth/2)/window.innerHeight,.1,1000);
+    camera.position.set(0,1.6,0);
+    const hm=buildScene(scene,currentHero);
+    if(hm) heroMeshes.push(hm);
+    renderers.push(renderer);scenes.push(scene);cameras.push(camera);
+  });
+  setupControls();animate();
+}
+
+// ── HERO BUILDERS ──────────────────────────────────────────────
+
+function buildBatmanFigure(scene){
+  const g=new THREE.Group();
+
+  // Body — dark armour
+  const torso=new THREE.Mesh(new THREE.CylinderGeometry(.28,.32,.7,8),new THREE.MeshLambertMaterial({color:0x111122}));
+  torso.position.y=1.05; g.add(torso);
+
+  // Chest bat symbol
+  const batSymbol=new THREE.Mesh(new THREE.BoxGeometry(.35,.15,.04),new THREE.MeshLambertMaterial({color:0xffee00}));
+  batSymbol.position.set(0,1.15,.29); g.add(batSymbol);
+
+  // Head + cowl
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.18,10,10),new THREE.MeshLambertMaterial({color:0x111122}));
+  head.position.y=1.6; g.add(head);
+  // Ears
+  const earGeo=new THREE.ConeGeometry(.05,.18,4);
+  const earMat=new THREE.MeshLambertMaterial({color:0x111122});
+  [-1,1].forEach(s=>{const e=new THREE.Mesh(earGeo,earMat);e.position.set(s*.1,1.82,0);g.add(e);});
+  // Face
+  const face=new THREE.Mesh(new THREE.PlaneGeometry(.22,.12),new THREE.MeshBasicMaterial({color:0xddaa88}));
+  face.position.set(0,1.58,.17); g.add(face);
+
+  // Arms
+  const armMat=new THREE.MeshLambertMaterial({color:0x111122});
+  [-1,1].forEach(s=>{
+    const upper=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.3,6),armMat);
+    upper.rotation.z=s*.5; upper.position.set(s*.38,1.12,0); g.add(upper);
+    const lower=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.28,6),armMat);
+    lower.rotation.z=s*.9; lower.position.set(s*.52,.88,0); g.add(lower);
+    const hand=new THREE.Mesh(new THREE.SphereGeometry(.07,6,6),new THREE.MeshLambertMaterial({color:0x222233}));
+    hand.position.set(s*.62,.72,0); g.add(hand);
+  });
+
+  // Legs
+  const legMat=new THREE.MeshLambertMaterial({color:0x111122});
+  [-1,1].forEach(s=>{
+    const upper=new THREE.Mesh(new THREE.CylinderGeometry(.1,.09,.38,6),legMat);
+    upper.position.set(s*.14,.52,0); g.add(upper);
+    const lower=new THREE.Mesh(new THREE.CylinderGeometry(.08,.07,.35,6),legMat);
+    lower.position.set(s*.14,.16,0); g.add(lower);
+    const boot=new THREE.Mesh(new THREE.BoxGeometry(.14,.1,.22),new THREE.MeshLambertMaterial({color:0x0a0a1a}));
+    boot.position.set(s*.14,-.02,.04); g.add(boot);
+  });
+
+  // Cape
+  const capeShape=new THREE.Shape();
+  capeShape.moveTo(-.32,0);capeShape.lineTo(.32,0);capeShape.lineTo(.55,-1.1);capeShape.lineTo(0,-.9);capeShape.lineTo(-.55,-1.1);capeShape.closePath();
+  const capeGeo=new THREE.ShapeGeometry(capeShape);
+  const cape=new THREE.Mesh(capeGeo,new THREE.MeshLambertMaterial({color:0x0d0d22,side:THREE.DoubleSide}));
+  cape.position.set(0,1.38,-.15); g.add(cape);
+
+  // Utility belt
+  const belt=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.07,8),new THREE.MeshLambertMaterial({color:0xddaa00}));
+  belt.position.y=.72; g.add(belt);
+
+  g.position.set(0,0,-4);
+  scene.add(g);
+  return g;
+}
+
+function buildSupermanFigure(scene){
+  const g=new THREE.Group();
+
+  // Body — blue suit
+  const torso=new THREE.Mesh(new THREE.CylinderGeometry(.3,.33,.72,8),new THREE.MeshLambertMaterial({color:0x1133cc}));
+  torso.position.y=1.05; g.add(torso);
+
+  // S shield
+  const shield=new THREE.Mesh(new THREE.BoxGeometry(.28,.3,.04),new THREE.MeshLambertMaterial({color:0xffdd00}));
+  shield.position.set(0,1.1,.31); g.add(shield);
+  const sLetter=new THREE.Mesh(new THREE.BoxGeometry(.14,.18,.05),new THREE.MeshLambertMaterial({color:0xdd0000}));
+  sLetter.position.set(0,1.1,.34); g.add(sLetter);
+
+  // Head
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.19,10,10),new THREE.MeshLambertMaterial({color:0xddaa77}));
+  head.position.y=1.62; g.add(head);
+  // Hair
+  const hair=new THREE.Mesh(new THREE.SphereGeometry(.2,.8,10,0,Math.PI*2,0,Math.PI*.55),new THREE.MeshLambertMaterial({color:0x111100}));
+  hair.position.y=1.68; g.add(hair);
+
+  // Red briefs
+  const briefs=new THREE.Mesh(new THREE.CylinderGeometry(.31,.3,.2,8),new THREE.MeshLambertMaterial({color:0xcc0000}));
+  briefs.position.y=.72; g.add(briefs);
+
+  // Arms — outstretched flying pose
+  const armMat=new THREE.MeshLambertMaterial({color:0x1133cc});
+  [-1,1].forEach(s=>{
+    const upper=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.35,6),armMat);
+    upper.rotation.z=s*1.3; upper.position.set(s*.42,1.22,0); g.add(upper);
+    const lower=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.32,6),armMat);
+    lower.rotation.z=s*1.5; lower.position.set(s*.68,1.08,0); g.add(lower);
+    const hand=new THREE.Mesh(new THREE.SphereGeometry(.08,6,6),new THREE.MeshLambertMaterial({color:0xddaa77}));
+    hand.position.set(s*.88,1.0,0); g.add(hand);
+  });
+
+  // Legs — straight (flying)
+  const legMat=new THREE.MeshLambertMaterial({color:0x1133cc});
+  [-1,1].forEach(s=>{
+    const upper=new THREE.Mesh(new THREE.CylinderGeometry(.11,.1,.4,6),legMat);
+    upper.position.set(s*.13,.52,0); g.add(upper);
+    const lower=new THREE.Mesh(new THREE.CylinderGeometry(.09,.08,.38,6),legMat);
+    lower.position.set(s*.13,.13,0); g.add(lower);
+    const boot=new THREE.Mesh(new THREE.BoxGeometry(.15,.1,.22),new THREE.MeshLambertMaterial({color:0xcc0000}));
+    boot.position.set(s*.13,-.07,.04); g.add(boot);
+  });
+
+  // Cape
+  const capeShape=new THREE.Shape();
+  capeShape.moveTo(-.3,0);capeShape.lineTo(.3,0);capeShape.lineTo(.4,-1.2);capeShape.lineTo(0,-1.0);capeShape.lineTo(-.4,-1.2);capeShape.closePath();
+  const cape=new THREE.Mesh(new THREE.ShapeGeometry(capeShape),new THREE.MeshLambertMaterial({color:0xcc0000,side:THREE.DoubleSide}));
+  cape.position.set(0,1.42,-.18); g.add(cape);
+
+  g.position.set(0,.5,-4);
+  // Slight forward tilt — flying pose
+  g.rotation.x=-.18;
+  scene.add(g);
+  return g;
+}
+
+function buildSpidermanFigure(scene){
+  const g=new THREE.Group();
+
+  // Body — red/blue suit
+  const torso=new THREE.Mesh(new THREE.CylinderGeometry(.27,.30,.68,8),new THREE.MeshLambertMaterial({color:0xcc1111}));
+  torso.position.y=1.05; g.add(torso);
+
+  // Web pattern lines on torso
+  for(let i=0;i<3;i++){
+    const line=new THREE.Mesh(new THREE.BoxGeometry(.55,.02,.04),new THREE.MeshBasicMaterial({color:0x880000}));
+    line.position.set(0,1.0+i*.15,.28); g.add(line);
+  }
+
+  // Head — mask
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.18,10,10),new THREE.MeshLambertMaterial({color:0xcc1111}));
+  head.position.y=1.58; g.add(head);
+  // Eye lenses (white)
+  [-1,1].forEach(s=>{
+    const eye=new THREE.Mesh(new THREE.EllipseCurve ? new THREE.SphereGeometry(.055,8,8) : new THREE.SphereGeometry(.055,8,8),new THREE.MeshBasicMaterial({color:0xffffff}));
+    eye.position.set(s*.08,1.6,.15); g.add(eye);
+  });
+
+  // Blue legs
+  const legMat=new THREE.MeshLambertMaterial({color:0x1144aa});
+  [-1,1].forEach(s=>{
+    // crouching-ish pose
+    const upper=new THREE.Mesh(new THREE.CylinderGeometry(.1,.09,.36,6),legMat);
+    upper.rotation.z=s*.3; upper.position.set(s*.16,.52,0); g.add(upper);
+    const lower=new THREE.Mesh(new THREE.CylinderGeometry(.08,.07,.33,6),legMat);
+    lower.rotation.z=s*.15; lower.position.set(s*.18,.15,0); g.add(lower);
+    const boot=new THREE.Mesh(new THREE.BoxGeometry(.13,.09,.2),new THREE.MeshLambertMaterial({color:0xcc1111}));
+    boot.position.set(s*.18,-.04,.03); g.add(boot);
+  });
+
+  // Arms — web-shooting pose
+  const armMat=new THREE.MeshLambertMaterial({color:0xcc1111});
+  [-1,1].forEach(s=>{
+    const upper=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.3,6),armMat);
+    upper.rotation.z=s*.6; upper.position.set(s*.36,1.1,0); g.add(upper);
+    const lower=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.28,6),armMat);
+    lower.rotation.z=s*1.1; lower.position.set(s*.52,.88,.1); g.add(lower);
+    const hand=new THREE.Mesh(new THREE.SphereGeometry(.07,6,6),new THREE.MeshLambertMaterial({color:0xcc1111}));
+    hand.position.set(s*.62,.72,.15); g.add(hand);
+  });
+
+  // Web lines shooting from hands
+  [-1,1].forEach(s=>{
+    const pts=[new THREE.Vector3(s*.62,.72,.15),new THREE.Vector3(s*3.5,3.5,-8)];
+    const wg=new THREE.BufferGeometry().setFromPoints(pts);
+    scene.add(new THREE.Line(wg,new THREE.LineBasicMaterial({color:0xffffff,linewidth:2})));
+  });
+
+  g.position.set(0,0,-4);
+  scene.add(g);
+  return g;
+}
+
+// ── SCENE BUILDERS ─────────────────────────────────────────────
+
+function buildScene(scene,hero){
+  scene.add(new THREE.AmbientLight(0xffffff,.5));
+  const dir=new THREE.DirectionalLight(0xffffff,1.2);dir.position.set(5,10,5);scene.add(dir);
+  // Rim light in hero colour
+  const rim=new THREE.PointLight(HEROES[hero].color,2,12);rim.position.set(0,2,-3.5);scene.add(rim);
+
+  let hg=null;
+  if(hero==='batman'){buildGotham(scene);hg=buildBatmanFigure(scene);}
+  else if(hero==='superman'){buildSky(scene);hg=buildSupermanFigure(scene);}
+  else{buildCity(scene);hg=buildSpidermanFigure(scene);}
+  return hg;
+}
+
+function buildGotham(scene){
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.MeshLambertMaterial({color:0x111122}));
+  floor.rotation.x=-Math.PI/2;scene.add(floor);
+  const bmat=new THREE.MeshLambertMaterial({color:0x1a1a3e});
+  const wmat=new THREE.MeshBasicMaterial({color:0xffffaa,transparent:true,opacity:.8});
+  for(let i=0;i<30;i++){
+    const w=3+Math.random()*5,h=8+Math.random()*20,d=3+Math.random()*5;
+    const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),bmat);
+    const angle=Math.random()*Math.PI*2,dist=15+Math.random()*30;
+    b.position.set(Math.cos(angle)*dist,h/2,Math.sin(angle)*dist);scene.add(b);
+    for(let j=0;j<4;j++){const win=new THREE.Mesh(new THREE.PlaneGeometry(.6,.8),wmat);win.position.set(b.position.x+(Math.random()-.5)*w*.8,b.position.y+(Math.random()-.5)*h*.8,b.position.z+d/2+.01);scene.add(win);}
+  }
+  const moon=new THREE.Mesh(new THREE.SphereGeometry(3,16,16),new THREE.MeshBasicMaterial({color:0xeeeebb}));
+  moon.position.set(-20,30,-50);scene.add(moon);
+  const sg=new THREE.BufferGeometry();const sv=[];
+  for(let i=0;i<500;i++)sv.push((Math.random()-.5)*200,(Math.random()*80)+10,(Math.random()-.5)*200);
+  sg.setAttribute('position',new THREE.Float32BufferAttribute(sv,3));
+  scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xffffff,size:.3})));
+  scene.fog=new THREE.FogExp2(0x05050f,.012);
+}
+
+function buildSky(scene){
+  scene.background=new THREE.Color(0x0033aa);
+  const cmat=new THREE.MeshLambertMaterial({color:0xffffff,transparent:true,opacity:.9});
+  for(let i=0;i<20;i++){
+    const g=new THREE.Group();
+    for(let j=0;j<5;j++){const m=new THREE.Mesh(new THREE.SphereGeometry(1.5+Math.random()*2,8,8),cmat);m.position.set((Math.random()-.5)*4,(Math.random()-.5)*1.5,(Math.random()-.5)*3);g.add(m);}
+    const angle=Math.random()*Math.PI*2,dist=10+Math.random()*40;
+    g.position.set(Math.cos(angle)*dist,(Math.random()-.5)*10+1.5,Math.sin(angle)*dist);scene.add(g);
+  }
+  const sun=new THREE.Mesh(new THREE.SphereGeometry(4,16,16),new THREE.MeshBasicMaterial({color:0xffee88}));
+  sun.position.set(30,20,-60);scene.add(sun);
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(500,500),new THREE.MeshLambertMaterial({color:0x225522}));
+  ground.rotation.x=-Math.PI/2;ground.position.y=-80;scene.add(ground);
+  scene.fog=new THREE.Fog(0x4488ff,50,200);
+}
+
+function buildCity(scene){
+  scene.background=new THREE.Color(0x110008);
+  const bcolors=[0x220000,0x330011,0x111122];
+  for(let i=0;i<40;i++){
+    const w=4+Math.random()*8,h=20+Math.random()*60,d=4+Math.random()*8;
+    const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:bcolors[Math.floor(Math.random()*3)]}));
+    const angle=Math.random()*Math.PI*2,dist=12+Math.random()*50;
+    b.position.set(Math.cos(angle)*dist,h/2-2,Math.sin(angle)*dist);scene.add(b);
+  }
+  const sg=new THREE.BufferGeometry();const sv=[];
+  for(let i=0;i<400;i++)sv.push((Math.random()-.5)*200,(Math.random()*60)+10,(Math.random()-.5)*200);
+  sg.setAttribute('position',new THREE.Float32BufferAttribute(sv,3));
+  scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xffffff,size:.25})));
+  scene.fog=new THREE.FogExp2(0x0a0005,.015);
+}
+
+// ── CONTROLS ───────────────────────────────────────────────────
+function setupControls(){
+  document.addEventListener('mousemove',onMouseMove);
+  window.addEventListener('deviceorientation',onGyro);
+  document.addEventListener('touchstart',e=>{lastTouch=e.touches[0];});
+  document.addEventListener('touchmove',e=>{
+    if(!lastTouch)return;
+    targetYaw-=(e.touches[0].clientX-lastTouch.clientX)*.003;
+    targetPitch-=(e.touches[0].clientY-lastTouch.clientY)*.003;
+    lastTouch=e.touches[0];
+  });
+}
+function removeControls(){document.removeEventListener('mousemove',onMouseMove);window.removeEventListener('deviceorientation',onGyro);}
+function onMouseMove(e){targetYaw=-(e.clientX/window.innerWidth-.5)*Math.PI*1.5;targetPitch=(e.clientY/window.innerHeight-.5)*Math.PI*.6;}
+function onGyro(e){if(e.beta===null)return;targetPitch=THREE.MathUtils.degToRad(Math.min(Math.max(e.beta-90,-45),45));targetYaw=-THREE.MathUtils.degToRad(e.gamma||0)*.8;}
+
+function animate(){
+  animId=requestAnimationFrame(animate);
+  const t=clock.getElapsedTime();
+  yaw+=(targetYaw-yaw)*.08;
+  pitch+=(targetPitch-pitch)*.08;
+  pitch=Math.max(-Math.PI*.4,Math.min(Math.PI*.4,pitch));
+
+  // Animate hero figures
+  heroMeshes.forEach(hm=>{
+    if(!hm)return;
+    if(currentHero==='batman'){
+      hm.rotation.y=Math.sin(t*.4)*.3;
+      hm.position.y=Math.sin(t*.8)*.06; // subtle hover
+    } else if(currentHero==='superman'){
+      hm.rotation.y=Math.sin(t*.3)*.25;
+      hm.position.y=.5+Math.sin(t*.7)*.12; // flying bob
+      hm.rotation.z=Math.sin(t*.5)*.05;
+    } else {
+      hm.rotation.y=Math.sin(t*.5)*.35;
+      hm.position.y=Math.sin(t)*.08; // bouncy
+    }
+  });
+
+  const q=new THREE.Quaternion();
+  q.setFromEuler(new THREE.Euler(pitch,yaw,0,'YXZ'));
+  cameras.forEach((cam,i)=>{cam.quaternion.copy(q);renderers[i].render(scenes[i],cam);});
+}
+
+function goBack(){
+  if(animId)cancelAnimationFrame(animId);
+  removeControls();
+  renderers.forEach(r=>r.dispose());
+  heroMeshes=[];
+  document.getElementById('vr-screen').style.display='none';
+  document.getElementById('selection').style.display='flex';
+}
+
+window.addEventListener('resize',()=>{
+  if(document.getElementById('vr-screen').style.display==='block'){
+    renderers.forEach((r,i)=>{
+      r.setSize(window.innerWidth/2,window.innerHeight);
+      cameras[i].aspect=(window.innerWidth/2)/window.innerHeight;
+      cameras[i].updateProjectionMatrix();
+    });
+  }
+});
+</script>
+</body>
+</html>
